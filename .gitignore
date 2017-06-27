@@ -1,0 +1,7 @@
+*.o
+*.a
+.idea*
+
+CMakeFiles/
+CMakeCache.txt
+*.bin
