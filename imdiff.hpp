@@ -6,8 +6,32 @@
 #include<opencv2/highgui/highgui.hpp>
 #include<opencv2/imgproc/imgproc.hpp>
 #include <stdlib.h>
-#include<math.h>
+#include <math.h>
+#include <string>
+#include <stdio.h>
 
+std::string type2str(int type) {
+  std::string r;
+
+  uchar depth = type & CV_MAT_DEPTH_MASK;
+  uchar chans = 1 + (type >> CV_CN_SHIFT);
+
+  switch ( depth ) {
+    case CV_8U:  r = "8U"; break;
+    case CV_8S:  r = "8S"; break;
+    case CV_16U: r = "16U"; break;
+    case CV_16S: r = "16S"; break;
+    case CV_32S: r = "32S"; break;
+    case CV_32F: r = "32F"; break;
+    case CV_64F: r = "64F"; break;
+    default:     r = "User"; break;
+  }
+
+  r += "C";
+  r += (chans+'0');
+
+  return r;
+}
 
 void show_hist(const cv::Mat hist, cv::Mat histImage, int hist_w, int hist_h, int histSize=256)
 {
@@ -18,33 +42,54 @@ void show_hist(const cv::Mat hist, cv::Mat histImage, int hist_w, int hist_h, in
                          cv::Point( bin_w*(i), hist_h - cvRound(hist.at<float>(i)) ),
                          cv::Scalar( 255, 0, 0), 2, 8, 0  );
 }
-cv::Mat get_image_hist(const cv::Mat img)
+//cv::Mat get_image_hist(const cv::Mat img)
+void get_image_hist(const cv::Mat& img, cv::Mat& hist)
+
 {
-    cv::Mat hist;
-    int histSize = 256;
+    //cv::Mat hist;
+    //int histSize = 256;
+        int histSize = 64;
+
     float range[] = {0, 256};
     const float* histRange = {range};
     bool uniform = true;
     bool accumulate = false;
     //void calcHist(const Mat* images, int nimages, const int* channels, InputArray mask, OutputArray hist, int dims, const int* histSize, const float** ranges, bool uniform=true, bool accumulate=false )
     cv::calcHist(&img, 1, 0, cv::Mat(), hist, 1, &histSize, &histRange, uniform, accumulate);
-    return hist;
+    //return hist;
 }
 
 //Return True if moved
-bool check_image_pair(cv::Mat img1, cv::Mat img2, float thresh=0.9, bool isShow=false)
+bool check_image_pair(cv::Mat& img1, cv::Mat& img2, float thresh=0.9, bool isShow=false)
 {
+  std::string ty =  type2str( img1.type() );
+    //printf("Matrix: %s %dx%d \n", ty.c_str(), M.cols, M.rows );
+    std::cout <<"img1 type:" << ty << std::endl;
+
+
+    int k;
+    printf("origin: \n");
+    for(k = 0; k< 20; k++){
+            printf("%d", img1.at<cv::Vec3b>(0,k)[0]);
+            printf(" %d", img1.at<cv::Vec3b>(0,k)[1]);
+            printf(" %d", img1.at<cv::Vec3b>(0,k)[2]);
+            printf("\n");
+
+    }
     cv::cvtColor(img1, img1, CV_BGR2GRAY);
     cv::cvtColor(img2, img2, CV_BGR2GRAY);
 
     cv::Mat hist1, hist2;
-    hist1 = get_image_hist(img1);
-    hist2 = get_image_hist(img2);
+//    hist1 = get_image_hist(img1);
+//    hist2 = get_image_hist(img2);
+    get_image_hist(img1, hist1);
+    get_image_hist(img2, hist2);
 
     int hist_w = 512; int hist_h=400;
     //Normalize the results to [0, histImage.rows]
     cv::normalize(hist1, hist1, 0, hist_h, cv::NORM_MINMAX, -1, cv::Mat());
     cv::normalize(hist2, hist2, 0, hist_h, cv::NORM_MINMAX, -1, cv::Mat());
+
 
     if(isShow)
     {
@@ -55,7 +100,7 @@ bool check_image_pair(cv::Mat img1, cv::Mat img2, float thresh=0.9, bool isShow=
     }
     
     float diff = cv::compareHist(hist1, hist2, CV_COMP_CORREL);
-
+    std::cout <<"diff:"<< fabs(diff);
     return fabsf(diff) < thresh;
 }
 
